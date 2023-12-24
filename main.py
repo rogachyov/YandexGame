@@ -5,7 +5,7 @@ import sys
 from random import randint, choice
 
 
-SIZE_BOARD = 25,25
+SIZE_BOARD = 25, 25
 pygame.init()
 SIZE = WIDTH, HEIGHT = 1920, 1080
 FPS = 60
@@ -27,6 +27,7 @@ def load_image(name, colorkey=None):
     else:
         image = image.convert_alpha()
     return image
+
 
 def cut_sheet(sheet, columns, rows, x, y):
     pass
@@ -72,7 +73,6 @@ class MenuButtons(pygame.sprite.Sprite):
 class Hero(pygame.sprite.Sprite):
     img = load_image('cat.png')
     frame_walk_up = []
-
 
     def __init__(self, board):
         super().__init__(hero_sprite)
@@ -143,13 +143,13 @@ class DungeonButton(pygame.sprite.Sprite):
         self.rect.y = HEIGHT - self.rect.h
 
     def update(self, event):
-        global n_dungeon
+        global board
         if self.rect.collidepoint(event.pos):
-            n_dungeon = 1
+            board = Board()
 
 
 class Board:
-    def first_nears(self, array):
+    def first_nears(self):
         wal = set()
         for i in range(4, SIZE_BOARD[0] - 1):
             wal.add((i, 1))
@@ -161,7 +161,8 @@ class Board:
             wal.add((SIZE_BOARD[1] - 1, i))
         return wal
 
-    def nears_group(self, array, group):
+    @staticmethod
+    def nears_group(array, group):
         result = list()
         for i in range(SIZE_BOARD[0]):
             for j in range(SIZE_BOARD[1]):
@@ -181,7 +182,8 @@ class Board:
                         result.append((i, j))
         return result
 
-    def find_clear_cells(self, array):
+    @staticmethod
+    def find_clear_cells(array):
         result = list()
         for i in range(1, SIZE_BOARD[0] - 1):
             for j in range(1, SIZE_BOARD[1] - 1):
@@ -190,7 +192,8 @@ class Board:
                     result.append((i, j))
         return result
 
-    def bfs(self, array):
+    @staticmethod
+    def bfs(array):
         delta = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         d = [[1e9] * SIZE_BOARD[0] for _ in range(SIZE_BOARD[1])]
         d[1][1] = 0
@@ -206,7 +209,8 @@ class Board:
                     q.insert(0, (nx, ny))
         return d
 
-    def bfs_yes_no(self, distant):
+    @staticmethod
+    def bfs_yes_no(distant):
         mmax = 0
         mmax_coord = (1, 1)
         for i in range(SIZE_BOARD[0]):
@@ -233,7 +237,7 @@ class Board:
         n_wals = randint(5, 7)
         for i in range(n_wals):
             walls = set()
-            b = self.first_nears(board)
+            b = self.first_nears()
             if len(b) < min(*SIZE_BOARD) // 4:
                 break
             c = choice(list(b))
@@ -270,10 +274,13 @@ class Board:
             return self.create_board()
 
     def __init__(self):
-        board = self.create_board()
+        self.new_board()
+
+    def new_board(self):
+        self.board = self.create_board()
         for i in range(SIZE_BOARD[0]):
             for j in range(SIZE_BOARD[1]):
-                Cells((i, j), board[i][j])
+                Cells((i, j), self.board[i][j])
 
 
 class Cells(pygame.sprite.Sprite):
@@ -288,8 +295,7 @@ class Cells(pygame.sprite.Sprite):
             color = 'green'
         self.image = pygame.Surface((50, 50), pygame.SRCALPHA, 32)
         pygame.draw.rect(self.image, color, (0, 0, 50, 50))
-        self.rect = pygame.Rect(pos[0] * 50, pos[1] * 50, 50, 50)
-
+        self.rect = pygame.Rect(pos[0] * 40 + 250, pos[1] * 40, 50, 50)
 
 
 def start_screen():
@@ -324,7 +330,6 @@ start_screen()
 n_dungeon = 0
 
 board_sprites = pygame.sprite.Group()
-board = Board()
 
 menu_sprite = pygame.sprite.Group()
 MenuBack(menu_sprite)
@@ -350,6 +355,7 @@ running = True
 menu_active = True
 start = False
 info = False
+board = []
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -367,7 +373,7 @@ while running:
     elif start:
         menu_active = False
         game_sprite.draw(screen)
-        if n_dungeon:
+        if board:
             board_sprites.draw(screen)
             hero_sprite.draw(screen)
     elif info:
