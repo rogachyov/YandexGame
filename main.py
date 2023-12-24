@@ -2,6 +2,10 @@ import pygame
 import os
 import sys
 
+from random import randint, choice
+
+
+SIZE_BOARD = 25,25
 pygame.init()
 SIZE = WIDTH, HEIGHT = 1920, 1080
 FPS = 60
@@ -144,30 +148,152 @@ class DungeonButton(pygame.sprite.Sprite):
             n_dungeon = 1
 
 
-class Board(pygame.sprite.Sprite):
-    def __init__(self, left, top, x, y, width, height):
-        super().__init__(board_sprites)
-        self.left = left
-        self.top = top
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.board = [[0] * x for _ in range(y)]
-        self.image = pygame.Surface((x * width + left, y * height + top), pygame.SRCALPHA, 32)
-        self.rect = self.image.get_rect()
-        for i in range(x):
-            for j in range(y):
-                if self.board[j][i] == 0:
-                    pygame.draw.rect(self.image, 'black', (left + width * i, top + height * j, width, height))
-                pygame.draw.rect(self.image, 'white', (left + width * i, top + height * j, width, height), 1)
+class Board:
+    def first_nears(self, array):
+        wal = set()
+        for i in range(4, SIZE_BOARD[0] - 1):
+            wal.add((i, 1))
+        for i in range(4, SIZE_BOARD[1] - 1):
+            wal.add((1, i))
+        for i in range(1, SIZE_BOARD[0] - 1):
+            wal.add((SIZE_BOARD[0] - 1, i))
+        for i in range(1, SIZE_BOARD[1] - 1):
+            wal.add((SIZE_BOARD[1] - 1, i))
+        return wal
 
-    def update(self, *args, **kwargs):
-        pass
+    def nears_group(self, array, group):
+        result = list()
+        for i in range(SIZE_BOARD[0]):
+            for j in range(SIZE_BOARD[1]):
+                if not array[i][j]:
+                    a = False
+                    for x, y in ((-1, 0), (0, -1), (0, 1), (1, 0)):
+                        if (i + x, j + y) in group:
+                            a = True
+                            break
+                    n = 0
+                    for x, y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
+                        if array[x + i][y + j]:
+                            n += 1
+                            if (i + x, y + j) not in group:
+                                a = False
+                    if a and n < 4:
+                        result.append((i, j))
+        return result
+
+    def find_clear_cells(self, array):
+        result = list()
+        for i in range(1, SIZE_BOARD[0] - 1):
+            for j in range(1, SIZE_BOARD[1] - 1):
+                if array[i][j] == 0 and not any([any(x[j - 1:j + 2])
+                                                 for x in array[i - 1:i + 2]]):
+                    result.append((i, j))
+        return result
+
+    def bfs(self, array):
+        delta = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        d = [[1e9] * SIZE_BOARD[0] for _ in range(SIZE_BOARD[1])]
+        d[1][1] = 0
+        q = [(1, 1), ]
+        mmax = 0
+        while q:
+            x, y = q.pop()
+            for dx, dy in delta:
+                nx, ny = dx + x, dy + y
+                if d[nx][ny] == 1e9 and array[nx][ny] != 1:
+                    d[nx][ny] = d[x][y] + 1
+                    mmax = max(d[nx][ny], mmax)
+                    q.insert(0, (nx, ny))
+        return d
+
+    def bfs_yes_no(self, distant):
+        mmax = 0
+        mmax_coord = (1, 1)
+        for i in range(SIZE_BOARD[0]):
+            for j in range(SIZE_BOARD[1]):
+                if distant[i][j] < 1e9:
+                    if mmax < distant[i][j]:
+                        mmax = distant[i][j]
+                        mmax_coord = (i, j)
+        if mmax > SIZE_BOARD[0] * 2:
+            return mmax_coord
+        else:
+            return False
+
+    def create_board(self):
+        board = [[0] * SIZE_BOARD[0] for _ in range(SIZE_BOARD[1])]
+        board[1][1] = 2
+        for i in range(SIZE_BOARD[0]):
+            board[i][0] = 1
+            board[i][-1] = 1
+        for i in range(SIZE_BOARD[1]):
+            board[0][i] = 1
+            board[-1][i] = 1
+
+        n_wals = randint(5, 7)
+        for i in range(n_wals):
+            walls = set()
+            b = self.first_nears(board)
+            if len(b) < min(*SIZE_BOARD) // 4:
+                break
+            c = choice(list(b))
+            walls.add(c)
+            board[c[0]][c[1]] = 1
+            for _ in range(randint(30, 70)):
+                try:
+                    cur_cell = choice(self.nears_group(board, walls))
+                    board[cur_cell[0]][cur_cell[1]] = 1
+                    walls.add(cur_cell)
+                except Exception:
+                    break
+
+        while True:
+            walls = set()
+            b = self.find_clear_cells(board)
+            if len(b) < min(*SIZE_BOARD) // 4:
+                break
+            c = choice(b)
+            walls.add(c)
+            board[c[0]][c[1]] = 1
+            for _ in range(randint(30, 70)):
+                try:
+                    cur_cell = choice(self.nears_group(board, walls))
+                    board[cur_cell[0]][cur_cell[1]] = 1
+                    walls.add(cur_cell)
+                except Exception:
+                    break
+        a = self.bfs_yes_no(self.bfs(board))
+        if a:
+            board[a[0]][a[1]] = 3
+            return board
+        else:
+            return self.create_board()
+
+    def __init__(self):
+        board = self.create_board()
+        for i in range(SIZE_BOARD[0]):
+            for j in range(SIZE_BOARD[1]):
+                Cells((i, j), board[i][j])
+
+
+class Cells(pygame.sprite.Sprite):
+    def __init__(self, pos, type):
+        super().__init__(board_sprites)
+        color = 'white'
+        if type == 1:
+            color = 'blue'
+        elif type == 2:
+            color = 'red'
+        elif type == 0:
+            color = 'green'
+        self.image = pygame.Surface((50, 50), pygame.SRCALPHA, 32)
+        pygame.draw.rect(self.image, color, (0, 0, 50, 50))
+        self.rect = pygame.Rect(pos[0] * 50, pos[1] * 50, 50, 50)
+
 
 
 def start_screen():
-    intro_text = ['Cat and dungeon']
+    intro_text = ['The dungeon cat']
 
     fon = pygame.transform.scale(load_image('game.png'), SIZE)
     screen.blit(fon, (0, 0))
@@ -198,7 +324,7 @@ start_screen()
 n_dungeon = 0
 
 board_sprites = pygame.sprite.Group()
-board = Board(200, 200, 15, 8, 80, 80)
+board = Board()
 
 menu_sprite = pygame.sprite.Group()
 MenuBack(menu_sprite)
