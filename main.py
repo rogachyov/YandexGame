@@ -71,29 +71,17 @@ class MenuButtons(pygame.sprite.Sprite):
 
 
 class Hero(pygame.sprite.Sprite):
-    img = load_image('cat.png')
+    img = pygame.transform.scale(load_image('cat.png'), (800, 800))
     frame_walk_up = []
 
-    def __init__(self, board):
+    def __init__(self):
         super().__init__(hero_sprite)
         self.x = 1
         self.y = 1
-        self.board = board
-        self.image = pygame.Surface((board.width, board.height), pygame.SRCALPHA, 32)
-        self.rect = self.image.get_rect()
-        self.rect.x = board.left + self.x * board.width
-        self.rect.y = board.top + self.y * board.height
-        pygame.draw.rect(screen, 'red', self.rect)
-
-    def move(self, key):
-        if key.scancode == 81:
-            self.y += self.rect.size
-        elif key.scancode == 79:
-            self.x += self.rect.size
-        elif key.scancode == 80:
-            self.x -= self.rect.size
-        elif key.scancode == 82:
-            self.y -= self.rect.size
+        self.image = Hero.img.subsurface(pygame.Rect(0, 0, 200, 200))
+        self.rect = pygame.Rect(0, 0, 200, 200)
+        self.rect.x = 800
+        self.rect.y = 400
 
 
 class StartGame(pygame.sprite.Sprite):
@@ -274,13 +262,19 @@ class Board:
             return self.create_board()
 
     def __init__(self):
-        self.new_board()
+        self.end_pos = self.new_board()
 
     def new_board(self):
         self.board = self.create_board()
+        end_pos = (0, 0)
         for i in range(SIZE_BOARD[0]):
             for j in range(SIZE_BOARD[1]):
+                if self.board[i][j] == 2:
+                    self.board[i][j] = 0
+                elif self.board[i][j] == 3:
+                    end_pos = (i, j)
                 Cells((i, j), self.board[i][j])
+        return end_pos
 
 
 class Cells(pygame.sprite.Sprite):
@@ -293,9 +287,9 @@ class Cells(pygame.sprite.Sprite):
             color = 'red'
         elif type == 0:
             color = 'green'
-        self.image = pygame.Surface((50, 50), pygame.SRCALPHA, 32)
-        pygame.draw.rect(self.image, color, (0, 0, 50, 50))
-        self.rect = pygame.Rect(pos[0] * 40 + 250, pos[1] * 40, 50, 50)
+        self.image = pygame.Surface((200, 200), pygame.SRCALPHA, 32)
+        pygame.draw.rect(self.image, color, (0, 0, 200, 200))
+        self.rect = pygame.Rect(pos[0] * 200 + 600, pos[1] * 200 + 200, 200, 200)
 
 
 def start_screen():
@@ -306,7 +300,7 @@ def start_screen():
     font = pygame.font.Font(None, 250)
     text_coord = 50
     for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
+        string_rendered = font.render(line, True, pygame.Color('black'))
         intro_rect = string_rendered.get_rect()
         text_coord += 10
         intro_rect.top = text_coord
@@ -323,6 +317,17 @@ def start_screen():
                 return  # начинаем игру
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def move(turn, hero, board):
+    if board.board[hero.x + turn[0]][hero.y - turn[1]] != 1:
+        for i in board_sprites:
+            i.rect.x -= turn[0] * 200
+            i.rect.y += turn[1] * 200
+        hero.x += turn[0]
+        hero.y -= turn[1]
+    if board.board[hero.x][hero.y] == 3:
+        exit(0)
 
 
 start_screen()
@@ -349,19 +354,27 @@ back_to_menu = pygame.sprite.Group()
 BackButton(back_to_menu)
 
 hero_sprite = pygame.sprite.Group()
-# hero = Hero(board)
+hero = Hero()
 
 running = True
 menu_active = True
 start = False
 info = False
-board = []
+board = Board()
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            pass
+            if event.key == pygame.K_LEFT:
+                move((-1, 0), hero, board)
+            elif event.key == pygame.K_RIGHT:
+                move((1, 0), hero, board)
+            elif event.key == pygame.K_UP:
+                move((0, 1), hero, board)
+            elif event.key == pygame.K_DOWN:
+                move((0, -1), hero, board)
+
         elif event.type == pygame.MOUSEBUTTONDOWN:
             menu_buttons.update(event)
             game_sprite.update(event)
