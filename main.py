@@ -29,10 +29,6 @@ def load_image(name, colorkey=None):
     return image
 
 
-def cut_sheet(sheet, columns, rows, x, y):
-    pass
-
-
 class MenuBack(pygame.sprite.Sprite):
     img = load_image('menu.png')
 
@@ -72,16 +68,25 @@ class MenuButtons(pygame.sprite.Sprite):
 
 class Hero(pygame.sprite.Sprite):
     img = pygame.transform.scale(load_image('cat.png'), (800, 800))
-    frame_walk_up = []
+    frame_walk = []
 
     def __init__(self):
         super().__init__(hero_sprite)
         self.x = 1
         self.y = 1
-        self.image = Hero.img.subsurface(pygame.Rect(0, 0, 200, 200))
+        self.images = self.cut_sheet()
+        self.image = self.images[1]
         self.rect = pygame.Rect(0, 0, 200, 200)
         self.rect.x = 800
         self.rect.y = 400
+
+    def cut_sheet(self):
+        result = list()
+        result.append(Hero.img.subsurface(pygame.Rect(0, 200, 200, 200)))
+        result.append(Hero.img.subsurface(pygame.Rect(200, 200, 200, 200)))
+        result.append(Hero.img.subsurface(pygame.Rect(400, 200, 200, 200)))
+        result.append(Hero.img.subsurface(pygame.Rect(600, 200, 200, 200)))
+        return result
 
 
 class StartGame(pygame.sprite.Sprite):
@@ -326,6 +331,14 @@ def move(turn, hero, board):
             i.rect.y += turn[1] * 200
         hero.x += turn[0]
         hero.y -= turn[1]
+    if turn == (0, 1):
+        hero.image = hero.images[0]
+    elif turn == (0, -1):
+        hero.image = hero.images[2]
+    elif turn == (1, 0):
+        hero.image = hero.images[1]
+    elif turn == (-1, 0):
+        hero.image = hero.images[3]
     if board.board[hero.x][hero.y] == 3:
         exit(0)
 
