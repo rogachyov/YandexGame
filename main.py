@@ -1,5 +1,5 @@
 import pygame
-import os
+from os import path
 import sys
 
 from random import randint, choice
@@ -14,8 +14,8 @@ clock = pygame.time.Clock()
 
 
 def load_image(name, colorkey=None):
-    fullname = os.path.join('data', name)
-    if not os.path.isfile(fullname):
+    fullname = path.join('data', name)
+    if not path.isfile(fullname):
         print(f'Файл с изображением "{fullname}" не найдена')
         sys.exit()
     image = pygame.image.load(fullname)
@@ -74,19 +74,43 @@ class Hero(pygame.sprite.Sprite):
         super().__init__(hero_sprite)
         self.x = 1
         self.y = 1
+        self.walk = False
         self.images = self.cut_sheet()
-        self.image = self.images[1]
+        self.cur_image = 0
+        self.image = self.images[int(self.walk)][1][self.cur_image]
         self.rect = pygame.Rect(0, 0, 200, 200)
         self.rect.x = 800
         self.rect.y = 400
+        self.turn = 1
+        self.tick = 1
 
     def cut_sheet(self):
-        result = list()
-        result.append(Hero.img.subsurface(pygame.Rect(0, 200, 200, 200)))
-        result.append(Hero.img.subsurface(pygame.Rect(200, 200, 200, 200)))
-        result.append(Hero.img.subsurface(pygame.Rect(400, 200, 200, 200)))
-        result.append(Hero.img.subsurface(pygame.Rect(600, 200, 200, 200)))
+        result = [[[], [], [], []], [[], [], [], []]]
+        result[1][0].append(Hero.img.subsurface(pygame.Rect(0, 0, 200, 200)))
+        result[1][0].append(Hero.img.subsurface(pygame.Rect(0, 200, 200, 200)))  # walk up
+        result[1][1].append(Hero.img.subsurface(pygame.Rect(200, 0, 200, 200)))
+        result[1][1].append(Hero.img.subsurface(pygame.Rect(200, 200, 200, 200)))  # walk right
+        result[1][2].append(Hero.img.subsurface(pygame.Rect(400, 0, 200, 200)))
+        result[1][2].append(Hero.img.subsurface(pygame.Rect(400, 200, 200, 200)))  # walk down
+        result[1][3].append(Hero.img.subsurface(pygame.Rect(600, 0, 200, 200)))
+        result[1][3].append(Hero.img.subsurface(pygame.Rect(600, 200, 200, 200)))  # walk left
+
+        result[0][0].append(Hero.img.subsurface(pygame.Rect(0, 400, 200, 200)))
+        result[0][0].append(Hero.img.subsurface(pygame.Rect(0, 600, 200, 200)))  # stay up
+        result[0][1].append(Hero.img.subsurface(pygame.Rect(200, 400, 200, 200)))
+        result[0][1].append(Hero.img.subsurface(pygame.Rect(200, 600, 200, 200)))  # stay right
+        result[0][2].append(Hero.img.subsurface(pygame.Rect(400, 400, 200, 200)))
+        result[0][2].append(Hero.img.subsurface(pygame.Rect(400, 600, 200, 200)))  # stay down
+        result[0][3].append(Hero.img.subsurface(pygame.Rect(600, 400, 200, 200)))
+        result[0][3].append(Hero.img.subsurface(pygame.Rect(600, 600, 200, 200)))  # stay left
         return result
+
+    def update(self, *args, **kwargs):
+        self.tick += 1
+        if self.tick == 10:
+            self.cur_image = (self.cur_image + 1) % 2
+            self.tick = 0
+        self.image = self.images[int(self.walk)][self.turn][self.cur_image]
 
 
 class StartGame(pygame.sprite.Sprite):
@@ -324,23 +348,40 @@ def start_screen():
         clock.tick(FPS)
 
 
-def move(turn, hero, board):
-    if board.board[hero.x + turn[0]][hero.y - turn[1]] != 1:
+def move(turn, hero, board, real_m):
+    global step
+    if board.board[hero.x + turn[0]][hero.y - turn[1]] != 1 and not real_m:
+        real_m = True
+        step = 20
+        hero.walk = True
+        real_move(turn)
+        if turn == (0, 1):
+            hero.turn = 0
+        elif turn == (0, -1):
+            hero.turn = 2
+        elif turn == (1, 0):
+            hero.turn = 1
+        elif turn == (-1, 0):
+            hero.turn = 3
+        if board.board[hero.x][hero.y] == 3:
+            exit(0)  # ToDo
+    return real_m
+
+
+def real_move(turn_h):
+    global step, turn, real_m
+    if step:
+        turn = turn_h
         for i in board_sprites:
-            i.rect.x -= turn[0] * 200
-            i.rect.y += turn[1] * 200
+            i.rect.x -= turn[0] * 10
+            i.rect.y += turn[1] * 10
+        step -= 1
+    else:
+        hero.walk = False
+        real_m = False
         hero.x += turn[0]
         hero.y -= turn[1]
-    if turn == (0, 1):
-        hero.image = hero.images[0]
-    elif turn == (0, -1):
-        hero.image = hero.images[2]
-    elif turn == (1, 0):
-        hero.image = hero.images[1]
-    elif turn == (-1, 0):
-        hero.image = hero.images[3]
-    if board.board[hero.x][hero.y] == 3:
-        exit(0)
+        turn = tuple()
 
 
 start_screen()
@@ -374,19 +415,44 @@ menu_active = True
 start = False
 info = False
 board = Board()
+real_m = False
+step = 0
+turn = tuple()
 while running:
+    if real_m:
+        real_move(turn)
+        screen.fill('white')
+        screen.fill('white')
+        if menu_active:
+            menu_sprite.draw(screen)
+            menu_buttons.draw(screen)
+        elif start:
+            menu_active = False
+            game_sprite.draw(screen)
+            if board:
+                hero_sprite.update()
+                board_sprites.draw(screen)
+                hero_sprite.draw(screen)
+        elif info:
+            menu_active = False
+            info_sprite.draw(screen)
+        if not menu_active:
+            back_to_menu.draw(screen)
+        pygame.display.flip()
+        clock.tick(FPS)
+        continue
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                move((-1, 0), hero, board)
+                real_m = move((-1, 0), hero, board, real_m)
             elif event.key == pygame.K_RIGHT:
-                move((1, 0), hero, board)
+                real_m = move((1, 0), hero, board, real_m)
             elif event.key == pygame.K_UP:
-                move((0, 1), hero, board)
+                real_m = move((0, 1), hero, board, real_m)
             elif event.key == pygame.K_DOWN:
-                move((0, -1), hero, board)
+                real_m = move((0, -1), hero, board, real_m)
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             menu_buttons.update(event)
@@ -400,6 +466,7 @@ while running:
         menu_active = False
         game_sprite.draw(screen)
         if board:
+            hero_sprite.update()
             board_sprites.draw(screen)
             hero_sprite.draw(screen)
     elif info:
