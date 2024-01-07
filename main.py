@@ -113,6 +113,19 @@ class Hero(pygame.sprite.Sprite):
         self.image = self.images[int(self.walk)][self.turn][self.cur_image]
 
 
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__(hero_sprite)
+        self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
+        while board.board[self.y][self.x]:
+            self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
+        self.image = pygame.Surface((200, 200), pygame.SRCALPHA, 32)
+        pygame.draw.rect(self.image, 'red', (0, 0, 200, 200))
+        self.rect = pygame.Rect(0, 0, 200, 200)
+        self.rect.x = 600 + self.x * 200
+        self.rect.y = 200 + self.y * 200
+
+
 class StartGame(pygame.sprite.Sprite):
     img = pygame.transform.scale(load_image('game.png'), (1920, 1080))
 
@@ -307,17 +320,20 @@ class Board:
 
 
 class Cells(pygame.sprite.Sprite):
+    img = pygame.transform.scale(load_image('cat.png'), (800, 800))
+    img_unde = pygame.transform.scale(load_image('ground.jpg'), (200, 200))
+    img_wall = pygame.transform.scale(load_image('wall.png'), (200, 200))
+    img_port = pygame.transform.scale(load_image('portal.jpg'), (200, 200))
+
     def __init__(self, pos, type):
         super().__init__(board_sprites)
         color = 'white'
         if type == 1:
-            color = 'blue'
-        elif type == 2:
-            color = 'red'
+            self.image = Cells.img_wall
         elif type == 0:
-            color = 'green'
-        self.image = pygame.Surface((200, 200), pygame.SRCALPHA, 32)
-        pygame.draw.rect(self.image, color, (0, 0, 200, 200))
+            self.image = Cells.img_unde
+        else:
+            self.image = Cells.img_port
         self.rect = pygame.Rect(pos[0] * 200 + 600, pos[1] * 200 + 200, 200, 200)
 
 
@@ -375,6 +391,8 @@ def real_move(turn_h):
         for i in board_sprites:
             i.rect.x -= turn[0] * 10
             i.rect.y += turn[1] * 10
+        enemy.rect.x -= turn[0] * 10
+        enemy.rect.y += turn[1] * 10
         step -= 1
     else:
         hero.walk = False
@@ -415,6 +433,7 @@ menu_active = True
 start = False
 info = False
 board = Board()
+enemy = Enemy()
 real_m = False
 step = 0
 turn = tuple()
@@ -422,22 +441,13 @@ while running:
     if real_m:
         real_move(turn)
         screen.fill('white')
-        screen.fill('white')
-        if menu_active:
-            menu_sprite.draw(screen)
-            menu_buttons.draw(screen)
-        elif start:
+        if start:
             menu_active = False
             game_sprite.draw(screen)
             if board:
-                hero_sprite.update()
                 board_sprites.draw(screen)
+                hero_sprite.update()
                 hero_sprite.draw(screen)
-        elif info:
-            menu_active = False
-            info_sprite.draw(screen)
-        if not menu_active:
-            back_to_menu.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
         continue
