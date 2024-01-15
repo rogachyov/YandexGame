@@ -127,12 +127,26 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class StartGame(pygame.sprite.Sprite):
-    img = pygame.transform.scale(load_image('game.png'), (1920, 1080))
+    img = pygame.transform.scale(load_image('menu.png'), (1920, 1080))
 
     def __init__(self, *args):
         super().__init__(*args)
         self.image = StartGame.img
         self.rect = self.image.get_rect()
+
+    def update(self, *args, **kwargs):
+        new_game()
+
+
+def new_game():
+    global board, enemy, real_m, step, turn, hero
+    board = Board()
+    enemy = Enemy()
+    real_m = False
+    step = 0
+    turn = tuple()
+
+    hero = Hero()
 
 
 class Info(pygame.sprite.Sprite):
@@ -155,11 +169,17 @@ class BackButton(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = 0, 0
 
     def update(self, *args):
-        global menu_active, running, info, start
+        global menu_active, running, info, start, board, enemy, real_m, step, turn, hero, game_sprite, board_sprites,\
+            hero_sprite
         if args and args[0].type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(args[0].pos):
             info = False
             start = False
             menu_active = True
+            board = enemy = real_m = step = turn = hero = None
+            game_sprite = pygame.sprite.Group()
+            board_sprites = pygame.sprite.Group()
+            hero_sprite = pygame.sprite.Group()
+            StartGame(game_sprite)
 
 
 class DungeonButton(pygame.sprite.Sprite):
@@ -417,7 +437,7 @@ for i in range(3):
 
 game_sprite = pygame.sprite.Group()
 StartGame(game_sprite)
-DungeonButton()
+# DungeonButton()
 
 info_sprite = pygame.sprite.Group()
 Info(info_sprite)
@@ -426,17 +446,18 @@ back_to_menu = pygame.sprite.Group()
 BackButton(back_to_menu)
 
 hero_sprite = pygame.sprite.Group()
-hero = Hero()
 
 running = True
 menu_active = True
 start = False
 info = False
-board = Board()
-enemy = Enemy()
 real_m = False
+board = None
+enemy = None
 step = 0
 turn = tuple()
+
+hero = None
 while running:
     if real_m:
         real_move(turn)
@@ -466,7 +487,8 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             menu_buttons.update(event)
-            game_sprite.update(event)
+            if board is None:
+                game_sprite.update(event)
             back_to_menu.update(event)
     screen.fill('white')
     if menu_active:
