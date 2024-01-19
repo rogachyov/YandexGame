@@ -119,6 +119,7 @@ class Enemy(pygame.sprite.Sprite):
         self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
         while board.board[self.y][self.x]:
             self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
+        board.board[self.x][self.y] = 4
         self.image = pygame.Surface((200, 200), pygame.SRCALPHA, 32)
         pygame.draw.rect(self.image, 'red', (0, 0, 200, 200))
         self.rect = pygame.Rect(0, 0, 200, 200)
@@ -139,7 +140,7 @@ class StartGame(pygame.sprite.Sprite):
 
 
 def new_game():
-    global board, enemy, real_m, step, turn, hero
+    global board, enemy, real_m, step, turn, hero, live
     board = Board()
     enemy = Enemy()
     real_m = False
@@ -147,6 +148,8 @@ def new_game():
     turn = tuple()
 
     hero = Hero()
+    live = 0
+    end_screen.clear_a()
 
 
 class Info(pygame.sprite.Sprite):
@@ -170,7 +173,7 @@ class BackButton(pygame.sprite.Sprite):
 
     def update(self, *args):
         global menu_active, running, info, start, board, enemy, real_m, step, turn, hero, game_sprite, board_sprites,\
-            hero_sprite
+            hero_sprite, live
         if args and args[0].type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(args[0].pos):
             info = False
             start = False
@@ -180,6 +183,7 @@ class BackButton(pygame.sprite.Sprite):
             board_sprites = pygame.sprite.Group()
             hero_sprite = pygame.sprite.Group()
             StartGame(game_sprite)
+            live = 0
 
 
 class DungeonButton(pygame.sprite.Sprite):
@@ -347,7 +351,6 @@ class Cells(pygame.sprite.Sprite):
 
     def __init__(self, pos, type):
         super().__init__(board_sprites)
-        color = 'white'
         if type == 1:
             self.image = Cells.img_wall
         elif type == 0:
@@ -385,7 +388,7 @@ def start_screen():
 
 
 def move(turn, hero, board, real_m):
-    global step
+    global step, live
     if board.board[hero.x + turn[0]][hero.y - turn[1]] != 1 and not real_m:
         real_m = True
         step = 20
@@ -400,12 +403,15 @@ def move(turn, hero, board, real_m):
         elif turn == (-1, 0):
             hero.turn = 3
         if board.board[hero.x][hero.y] == 3:
-            exit(0)  # ToDo
+            live = 1
+        if board.board[hero.x][hero.y] == 4:
+            live = 2
+
     return real_m
 
 
 def real_move(turn_h):
-    global step, turn, real_m
+    global step, turn, real_m, live
     if step:
         turn = turn_h
         for i in board_sprites:
@@ -415,6 +421,10 @@ def real_move(turn_h):
         enemy.rect.y += turn[1] * 10
         step -= 1
     else:
+        if board.board[hero.x + turn[0]][hero.y - turn[1]] == 3:
+            live = 1
+        if board.board[hero.x + turn[0]][hero.y - turn[1]] == 4:
+            live = 2
         hero.walk = False
         real_m = False
         hero.x += turn[0]
@@ -422,10 +432,36 @@ def real_move(turn_h):
         turn = tuple()
 
 
+class EndScreen(pygame.sprite.Sprite):
+    win_img = pygame.transform.scale(load_image('win.png'), SIZE)
+    lose_img = pygame.transform.scale(load_image('lose.png'), SIZE)
+
+    def __init__(self):
+        super().__init__(end_sprite)
+        self.rect = pygame.Rect(0, HEIGHT, *SIZE)
+
+    def win(self):
+        self.image = EndScreen.win_img
+
+        if self.rect.y > 0:
+            self.rect.y -= 50
+
+    def lose(self):
+        self.image = EndScreen.lose_img
+
+        if self.rect.y > 0:
+            self.rect.y -= 50
+
+    def clear_a(self):
+        self.rect.y = HEIGHT
+
+
 start_screen()
 
 n_dungeon = 0
 
+end_sprite = pygame.sprite.Group()
+end_screen = EndScreen()
 board_sprites = pygame.sprite.Group()
 
 menu_sprite = pygame.sprite.Group()
@@ -458,6 +494,7 @@ step = 0
 turn = tuple()
 
 hero = None
+live = 0
 while running:
     if real_m:
         real_move(turn)
@@ -472,9 +509,17 @@ while running:
         pygame.display.flip()
         clock.tick(FPS)
         continue
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if board is None:
+                menu_buttons.update(event)
+                game_sprite.update(event)
+            back_to_menu.update(event)
+        if live:
+            break
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 real_m = move((-1, 0), hero, board, real_m)
@@ -484,12 +529,6 @@ while running:
                 real_m = move((0, 1), hero, board, real_m)
             elif event.key == pygame.K_DOWN:
                 real_m = move((0, -1), hero, board, real_m)
-
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            menu_buttons.update(event)
-            if board is None:
-                game_sprite.update(event)
-            back_to_menu.update(event)
     screen.fill('white')
     if menu_active:
         menu_sprite.draw(screen)
@@ -504,6 +543,12 @@ while running:
     elif info:
         menu_active = False
         info_sprite.draw(screen)
+    if live == 1:
+        end_screen.win()
+        end_sprite.draw(screen)
+    elif live == 2:
+        end_screen.lose()
+        end_sprite.draw(screen)
     if not menu_active:
         back_to_menu.draw(screen)
     pygame.display.flip()
