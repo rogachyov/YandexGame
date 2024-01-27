@@ -121,7 +121,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(hero_sprite)
         self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
-        while board.board[self.y][self.x]:
+        while board.board[self.x][self.y]:
             self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
         board.board[self.x][self.y] = 4
         self.walk = False
@@ -155,13 +155,12 @@ class Enemy(pygame.sprite.Sprite):
         result[0][3].append(Enemy.img.subsurface(pygame.Rect(600, 600, 200, 200)))  # stay left
         return result
 
-    #def update(self, *args, **kwargs):
-        #self.tick += 1
-        #if self.tick == 10:
-            #self.cur_image = (self.cur_image + 1) % 2
-            #self.tick = 0
-        #self.image = self.images[int(self.walk)][self.turn][self.cur_image]
-
+    # def update(self, *args, **kwargs):
+    #     self.tick += 1
+    #     if self.tick == 10:
+    #         self.cur_image = (self.cur_image + 1) % 2
+    #         self.tick = 0
+    #     self.image = self.images[int(self.walk)][self.turn][self.cur_image]
 
 
 class StartGame(pygame.sprite.Sprite):
@@ -440,8 +439,10 @@ def move(turn, hero, board, real_m):
         elif turn == (-1, 0):
             hero.turn = 3
         if board.board[hero.x][hero.y] == 3:
+            # выиграл
             live = 1
         if board.board[hero.x][hero.y] == 4:
+            # умер
             live = 2
 
     return real_m
@@ -490,6 +491,7 @@ class EndScreen(pygame.sprite.Sprite):
             self.rect.y -= 50
 
     def clear_a(self):
+        # убрать конечное изображение с экрана
         self.rect.y = HEIGHT
 
 
@@ -532,17 +534,41 @@ turn = tuple()
 
 hero = None
 live = 0
+
+# секундомер
+start_time = 0
+elapsed_time = 0
+time_running = True # идёт аремя или нет
+
+# Шрифт
+font = pygame.font.SysFont(None, 100)
 while running:
-    if real_m:
+    if real_m: # Если идёт анимация кота
         real_move(turn)
         screen.fill('white')
-        if start:
+        if start: # если игра идёт
             menu_active = False
             game_sprite.draw(screen)
-            if board:
+            if board: # если поле созданно
                 board_sprites.draw(screen)
                 hero_sprite.update()
                 hero_sprite.draw(screen)
+                back_to_menu.draw(screen)
+
+                # Секундомер
+                if time_running:
+                    elapsed_time = pygame.time.get_ticks() - start_time
+
+                    # Вычисляем минуты, секунды и миллисекунды
+                    minutes = int(elapsed_time / 60000)
+                    seconds = int((elapsed_time % 60000) / 1000)
+                    milliseconds = int((elapsed_time % 1000))
+
+                    # Отображаем время на экране
+                    time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
+                    text = font.render(time_text, True, 'white')
+                    screen.blit(text, (WIDTH - 350, 0))
+
         pygame.display.flip()
         clock.tick(FPS)
         continue
@@ -551,13 +577,14 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if board is None:
+            if board is None: # если поле не созданно
                 menu_buttons.update(event)
                 game_sprite.update(event)
             back_to_menu.update(event)
-        if live:
+        if live: # если кот проиграл или выиграл, то нажатия кнопок игнорируются
             break
         elif event.type == pygame.KEYDOWN:
+            # упривление
             if event.key == pygame.K_LEFT:
                 real_m = move((-1, 0), hero, board, real_m)
             elif event.key == pygame.K_RIGHT:
@@ -566,28 +593,69 @@ while running:
                 real_m = move((0, 1), hero, board, real_m)
             elif event.key == pygame.K_DOWN:
                 real_m = move((0, -1), hero, board, real_m)
+
     screen.fill('white')
-    if menu_active:
+    if menu_active: # Активно меню
         menu_sprite.draw(screen)
         menu_buttons.draw(screen)
-    elif start:
+    elif start: # началась игра
         menu_active = False
         game_sprite.draw(screen)
-        if board:
+        if board: # созданно поле
             hero_sprite.update()
             board_sprites.draw(screen)
             hero_sprite.draw(screen)
-    elif info:
+
+            # Секундомер
+            if time_running:
+                elapsed_time = pygame.time.get_ticks() - start_time
+
+                # Вычисляем минуты, секунды и миллисекунды
+                minutes = int(elapsed_time / 60000)
+                seconds = int((elapsed_time % 60000) / 1000)
+                milliseconds = int((elapsed_time % 1000))
+
+                # Отображаем время на экране
+                time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
+                text = font.render(time_text, True, 'white')
+                screen.blit(text, (WIDTH - 350, 0))
+
+    elif info: # человек нажал на кнопку "info"
         menu_active = False
         info_sprite.draw(screen)
-    if live == 1:
+    if live == 1: # победа
         end_screen.win()
         end_sprite.draw(screen)
-    elif live == 2:
+
+        # Продолжаем отрисовывать время даже после окончания игры
+        time_running = False
+        minutes = int(elapsed_time / 60000)
+        seconds = int((elapsed_time % 60000) / 1000)
+        milliseconds = int((elapsed_time % 1000))
+
+        # Отображаем время на экране
+        time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
+        text = font.render(time_text, True, 'white')
+        screen.blit(text, (WIDTH - 350, 0))
+
+    elif live == 2: # проигрыш
         end_screen.lose()
         end_sprite.draw(screen)
-    if not menu_active:
+
+        # Продолжаем отрисовывать время даже после окончания игры
+        time_running = False
+        minutes = int(elapsed_time / 60000)
+        seconds = int((elapsed_time % 60000) / 1000)
+        milliseconds = int((elapsed_time % 1000))
+
+        # Отображаем время на экране
+        time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
+        text = font.render(time_text, True, 'white')
+        screen.blit(text, (WIDTH - 350, 0))
+
+    if not menu_active: # отрисовка кнопки "back" всегда, если меню не активно
         back_to_menu.draw(screen)
+
     pygame.display.flip()
     clock.tick(FPS)
 
