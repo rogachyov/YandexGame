@@ -176,7 +176,7 @@ class StartGame(pygame.sprite.Sprite):
 
 
 def new_game():
-    global board, enemy, real_m, step, turn, hero, live
+    global board, enemy, real_m, step, turn, hero, live, time_running, elapsed_time
     board = Board()
     enemy = Enemy()
     real_m = False
@@ -186,6 +186,8 @@ def new_game():
     hero = Hero()
     live = 0
     end_screen.clear_a()
+    time_running = False
+    elapsed_time = 0
 
 
 class Info(pygame.sprite.Sprite):
@@ -495,6 +497,14 @@ class EndScreen(pygame.sprite.Sprite):
         self.rect.y = HEIGHT
 
 
+def stop_time():
+    return False
+
+
+def start_time_f():
+    return 0, 0, True
+
+
 start_screen()
 
 n_dungeon = 0
@@ -538,13 +548,16 @@ live = 0
 # секундомер
 start_time = 0
 elapsed_time = 0
-time_running = True # идёт аремя или нет
+time_running = False # идёт аремя или нет
 
 # Шрифт
 font = pygame.font.SysFont(None, 100)
 while running:
     if real_m: # Если идёт анимация кота
         real_move(turn)
+        if not time_running:
+            time_running = True
+            start_time = pygame.time.get_ticks()
         screen.fill('white')
         if start: # если игра идёт
             menu_active = False
@@ -610,15 +623,15 @@ while running:
             if time_running:
                 elapsed_time = pygame.time.get_ticks() - start_time
 
-                # Вычисляем минуты, секунды и миллисекунды
-                minutes = int(elapsed_time / 60000)
-                seconds = int((elapsed_time % 60000) / 1000)
-                milliseconds = int((elapsed_time % 1000))
+            # Вычисляем минуты, секунды и миллисекунды
+            minutes = int(elapsed_time / 60000)
+            seconds = int((elapsed_time % 60000) / 1000)
+            milliseconds = int((elapsed_time % 1000))
 
-                # Отображаем время на экране
-                time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
-                text = font.render(time_text, True, 'white')
-                screen.blit(text, (WIDTH - 350, 0))
+            # Отображаем время на экране
+            time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
+            text = font.render(time_text, True, 'white')
+            screen.blit(text, (WIDTH - 350, 0))
 
     elif info: # человек нажал на кнопку "info"
         menu_active = False
