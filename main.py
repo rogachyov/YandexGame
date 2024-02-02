@@ -115,7 +115,7 @@ class Hero(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    img = pygame.transform.scale(load_image('dog.png'), (800, 800))
+    img = pygame.transform.scale(load_image('dog2.png'), (800, 800))
     frame_walk = []
 
     def __init__(self):
@@ -127,8 +127,10 @@ class Enemy(pygame.sprite.Sprite):
         self.walk = False
         self.images = self.cut_sheet()
         self.cur_image = 0
+        self.tick = 1
+        self.turn = 0
         #self.image = pygame.Surface((200, 200), pygame.SRCALPHA, 32)
-        self.image = self.images[int(self.walk)][3][self.cur_image]
+        self.image = self.images[int(self.walk)][0][self.turn]
         #pygame.draw.rect(self.image, 'red', (0, 0, 100, 100))
         self.rect = pygame.Rect(0, 0, 200, 200)
         self.rect.x = 600 + self.x * 200
@@ -136,31 +138,31 @@ class Enemy(pygame.sprite.Sprite):
 
     def cut_sheet(self):
         result = [[[], [], [], []], [[], [], [], []]]
-        result[1][0].append(Enemy.img.subsurface(pygame.Rect(0, 0, 200, 200)))
-        result[1][0].append(Enemy.img.subsurface(pygame.Rect(0, 200, 200, 200)))  # walk up
-        result[1][1].append(Enemy.img.subsurface(pygame.Rect(200, 0, 200, 200)))
-        result[1][1].append(Enemy.img.subsurface(pygame.Rect(200, 200, 200, 200)))  # walk right
-        result[1][2].append(Enemy.img.subsurface(pygame.Rect(400, 0, 200, 200)))
-        result[1][2].append(Enemy.img.subsurface(pygame.Rect(400, 200, 200, 200)))  # walk down
-        result[1][3].append(Enemy.img.subsurface(pygame.Rect(600, 0, 200, 200)))
-        result[1][3].append(Enemy.img.subsurface(pygame.Rect(600, 200, 200, 200)))  # walk left
+        result[1][0].append(Enemy.img.subsurface(pygame.Rect(200, 400, 200, 200)))
+        result[1][0].append(Enemy.img.subsurface(pygame.Rect(200, 400, 200, 200)))  # walk up
+        result[1][1].append(Enemy.img.subsurface(pygame.Rect(200, 200, 200, 200)))
+        result[1][1].append(Enemy.img.subsurface(pygame.Rect(600, 200, 200, 200)))  # walk right
+        result[1][2].append(Enemy.img.subsurface(pygame.Rect(200, 0, 200, 200)))
+        result[1][2].append(Enemy.img.subsurface(pygame.Rect(600, 0, 200, 200)))  # walk down
+        result[1][3].append(Enemy.img.subsurface(pygame.Rect(200, 600, 200, 200)))
+        result[1][3].append(Enemy.img.subsurface(pygame.Rect(600, 600, 200, 200)))  # walk left
 
         result[0][0].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
-        result[0][0].append(Enemy.img.subsurface(pygame.Rect(0, 600, 200, 200)))  # stay up
-        result[0][1].append(Enemy.img.subsurface(pygame.Rect(200, 400, 200, 200)))
-        result[0][1].append(Enemy.img.subsurface(pygame.Rect(200, 600, 200, 200)))  # stay right
-        result[0][2].append(Enemy.img.subsurface(pygame.Rect(400, 400, 200, 200)))
+        result[0][0].append(Enemy.img.subsurface(pygame.Rect(400, 400, 200, 200)))  # stay up
+        result[0][1].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
+        result[0][1].append(Enemy.img.subsurface(pygame.Rect(400, 600, 200, 200)))  # stay right
+        result[0][2].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
         result[0][2].append(Enemy.img.subsurface(pygame.Rect(400, 600, 200, 200)))  # stay down
-        result[0][3].append(Enemy.img.subsurface(pygame.Rect(600, 400, 200, 200)))
-        result[0][3].append(Enemy.img.subsurface(pygame.Rect(600, 600, 200, 200)))  # stay left
+        result[0][3].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
+        result[0][3].append(Enemy.img.subsurface(pygame.Rect(400, 600, 200, 200)))  # stay left
         return result
 
-    # def update(self, *args, **kwargs):
-    #     self.tick += 1
-    #     if self.tick == 10:
-    #         self.cur_image = (self.cur_image + 1) % 2
-    #         self.tick = 0
-    #     self.image = self.images[int(self.walk)][self.turn][self.cur_image]
+    def update(self, *args, **kwargs):
+        self.tick += 1
+        if self.tick == 10:
+            self.cur_image = (self.cur_image + 1) % 2
+            self.tick = 0
+        self.image = self.images[int(self.walk)][self.cur_image][self.turn]
 
 
 class StartGame(pygame.sprite.Sprite):
