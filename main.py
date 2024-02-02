@@ -443,6 +443,9 @@ def move(turn, hero, board, real_m):
         if board.board[hero.x][hero.y] == 3:
             # выиграл
             live = 1
+
+            write_result(time_text)
+
         if board.board[hero.x][hero.y] == 4:
             # умер
             live = 2
@@ -503,6 +506,14 @@ def stop_time():
 
 def start_time_f():
     return 0, 0, True
+
+
+def write_result(time_text):
+    with open('data/records.txt', 'r') as f:
+        data = f.readlines()
+    data.append(time_text + '\n')
+    with open('data/records.txt', 'w') as f:
+        f.writelines(sorted(data, reverse=True)[:4])
 
 
 start_screen()
@@ -611,6 +622,14 @@ while running:
     if menu_active: # Активно меню
         menu_sprite.draw(screen)
         menu_buttons.draw(screen)
+        with open('data/records.txt', 'r') as f:
+            text_rec = f.readlines()
+            print(text_rec)
+        screen.blit(font.render('TOP 3:', True, 'white'), (WIDTH - 350, 300))
+        for i in range(3):
+            screen.blit(font.render(text_rec[i].rstrip(), True, 'white'),
+                        (WIDTH - 350, 300 + 60 * (i + 1)))
+
     elif start: # началась игра
         menu_active = False
         game_sprite.draw(screen)
@@ -637,19 +656,23 @@ while running:
         menu_active = False
         info_sprite.draw(screen)
     if live == 1: # победа
-        end_screen.win()
-        end_sprite.draw(screen)
 
         # Продолжаем отрисовывать время даже после окончания игры
-        time_running = False
         minutes = int(elapsed_time / 60000)
         seconds = int((elapsed_time % 60000) / 1000)
         milliseconds = int((elapsed_time % 1000))
 
-        # Отображаем время на экране
         time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
         text = font.render(time_text, True, 'white')
+
+        end_screen.win()
+        end_sprite.draw(screen)
+
         screen.blit(text, (WIDTH - 350, 0))
+
+        if time_running:
+            write_result(time_text)
+            time_running = False
 
     elif live == 2: # проигрыш
         end_screen.lose()
