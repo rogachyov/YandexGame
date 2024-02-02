@@ -512,8 +512,12 @@ def write_result(time_text):
     with open('data/records.txt', 'r') as f:
         data = f.readlines()
     data.append(time_text + '\n')
+    data = list(filter(lambda x: x != '00:000.000\n', data))
+    data = sorted(data)
+    for i in range(3 - len(data)):
+        data.append('00:000.000\n')
     with open('data/records.txt', 'w') as f:
-        f.writelines(sorted(data, reverse=True)[:4])
+        f.writelines(data[:4])
 
 
 start_screen()
@@ -624,7 +628,6 @@ while running:
         menu_buttons.draw(screen)
         with open('data/records.txt', 'r') as f:
             text_rec = f.readlines()
-            print(text_rec)
         screen.blit(font.render('TOP 3:', True, 'white'), (WIDTH - 350, 300))
         for i in range(3):
             screen.blit(font.render(text_rec[i].rstrip(), True, 'white'),
