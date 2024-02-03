@@ -1,9 +1,9 @@
-import pygame
-from os import path
-import sys
 from math import sqrt
-
+from os import path
 from random import randint, choice
+import sys
+
+import pygame
 
 
 SIZE_BOARD = 25, 25
@@ -121,48 +121,65 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(hero_sprite)
         self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
-        while board.board[self.x][self.y]:
+        self.board = board.board
+        while self.board[self.x][self.y]:
             self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
-        board.board[self.x][self.y] = 4
-        self.walk = False
+        # board.board[self.x][self.y] = 4
+        # self.x, self.y = 2, 2
         self.images = self.cut_sheet()
         self.cur_image = 0
-        self.tick = 1
-        self.turn = 0
+        self.turn = 1
         #self.image = pygame.Surface((200, 200), pygame.SRCALPHA, 32)
-        self.image = self.images[int(self.walk)][0][self.turn]
+        self.image = self.images[self.turn][0]
         #pygame.draw.rect(self.image, 'red', (0, 0, 100, 100))
         self.rect = pygame.Rect(0, 0, 200, 200)
         self.rect.x = 600 + self.x * 200
         self.rect.y = 200 + self.y * 200
+        self.seconds = 0
 
     def cut_sheet(self):
-        result = [[[], [], [], []], [[], [], [], []]]
-        result[1][0].append(Enemy.img.subsurface(pygame.Rect(200, 400, 200, 200)))
-        result[1][0].append(Enemy.img.subsurface(pygame.Rect(200, 400, 200, 200)))  # walk up
-        result[1][1].append(Enemy.img.subsurface(pygame.Rect(200, 200, 200, 200)))
-        result[1][1].append(Enemy.img.subsurface(pygame.Rect(600, 200, 200, 200)))  # walk right
-        result[1][2].append(Enemy.img.subsurface(pygame.Rect(200, 0, 200, 200)))
-        result[1][2].append(Enemy.img.subsurface(pygame.Rect(600, 0, 200, 200)))  # walk down
-        result[1][3].append(Enemy.img.subsurface(pygame.Rect(200, 600, 200, 200)))
-        result[1][3].append(Enemy.img.subsurface(pygame.Rect(600, 600, 200, 200)))  # walk left
+        result = [[], [], [], []]
+        result[0].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
+        result[0].append(Enemy.img.subsurface(pygame.Rect(200, 400, 200, 200)))
+        result[0].append(Enemy.img.subsurface(pygame.Rect(400, 400, 200, 200)))
+        result[0].append(Enemy.img.subsurface(pygame.Rect(600, 400, 200, 200)))  # walk up
 
-        result[0][0].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
-        result[0][0].append(Enemy.img.subsurface(pygame.Rect(400, 400, 200, 200)))  # stay up
-        result[0][1].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
-        result[0][1].append(Enemy.img.subsurface(pygame.Rect(400, 600, 200, 200)))  # stay right
-        result[0][2].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
-        result[0][2].append(Enemy.img.subsurface(pygame.Rect(400, 600, 200, 200)))  # stay down
-        result[0][3].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
-        result[0][3].append(Enemy.img.subsurface(pygame.Rect(400, 600, 200, 200)))  # stay left
+        result[1].append(Enemy.img.subsurface(pygame.Rect(0, 200, 200, 200)))
+        result[1].append(Enemy.img.subsurface(pygame.Rect(200, 200, 200, 200)))
+        result[1].append(Enemy.img.subsurface(pygame.Rect(400, 200, 200, 200)))
+        result[1].append(Enemy.img.subsurface(pygame.Rect(600, 200, 200, 200)))  # walk right
+
+        result[2].append(Enemy.img.subsurface(pygame.Rect(0, 0, 200, 200)))
+        result[2].append(Enemy.img.subsurface(pygame.Rect(200, 0, 200, 200)))
+        result[2].append(Enemy.img.subsurface(pygame.Rect(400, 0, 200, 200)))
+        result[2].append(Enemy.img.subsurface(pygame.Rect(600, 0, 200, 200)))  # walk down
+
+        result[3].append(Enemy.img.subsurface(pygame.Rect(0, 600, 200, 200)))
+        result[3].append(Enemy.img.subsurface(pygame.Rect(200, 600, 200, 200)))
+        result[3].append(Enemy.img.subsurface(pygame.Rect(400, 600, 200, 200)))
+        result[3].append(Enemy.img.subsurface(pygame.Rect(600, 600, 200, 200)))  # walk left
         return result
 
     def update(self, *args, **kwargs):
-        self.tick += 1
-        if self.tick == 10:
-            self.cur_image = (self.cur_image + 1) % 2
-            self.tick = 0
-        self.image = self.images[int(self.walk)][self.cur_image][self.turn]
+        seconds = int((elapsed_time % 60000) / 1000)
+
+        if seconds != self.seconds:
+            self.image = self.images[self.turn][self.cur_image]
+            if not (seconds & 1):
+                x, y = choice(self.find_way())
+                self.x += x
+                self.y += y
+                self.rect.x += x * 200
+                self.rect.y += y * 200
+            self.seconds = seconds
+
+    def find_way(self):
+        res = []
+        delta = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        for i, j in delta:
+             if not self.board[self.x + i][self.y + j]:
+                 res.append((i, j))
+        return res
 
 
 class StartGame(pygame.sprite.Sprite):
@@ -448,7 +465,7 @@ def move(turn, hero, board, real_m):
 
             write_result(time_text)
 
-        if board.board[hero.x][hero.y] == 4:
+        if (hero.x, hero.y) == (enemy.x, enemy.y):
             # умер
             live = 2
 
