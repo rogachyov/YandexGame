@@ -1,4 +1,3 @@
-from math import sqrt
 from os import path
 from random import randint, choice
 import sys
@@ -109,36 +108,37 @@ class Hero(pygame.sprite.Sprite):
     def update(self, *args, **kwargs):
         self.tick += 1
         if self.tick == 10:
-            self.cur_image = (self.cur_image + 1) % 2
+            self.cur_image = (self.cur_image + 1) & 1
             self.tick = 0
         self.image = self.images[int(self.walk)][self.turn][self.cur_image]
 
 
 class Enemy(pygame.sprite.Sprite):
     img = pygame.transform.scale(load_image('dog2.png'), (800, 800))
-    frame_walk = []
 
-    def __init__(self):
+    def __init__(self, x, y):
         super().__init__(hero_sprite)
-        self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
-        self.board = board.board
-        while self.board[self.x][self.y]:
-            self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
+        self.x, self.y = x, y
+        # while self.board[self.x][self.y]:
+        #     self.x, self.y = randint(1, SIZE_BOARD[0] - 1), randint(1, SIZE_BOARD[1] - 1)
         # board.board[self.x][self.y] = 4
-        # self.x, self.y = 2, 2
         self.images = self.cut_sheet()
         self.cur_image = 0
-        self.turn = 1
+        self.turn = None
         #self.image = pygame.Surface((200, 200), pygame.SRCALPHA, 32)
-        self.image = self.images[self.turn][0]
+        self.image = self.images[1][0]
         #pygame.draw.rect(self.image, 'red', (0, 0, 100, 100))
         self.rect = pygame.Rect(0, 0, 200, 200)
         self.rect.x = 600 + self.x * 200
         self.rect.y = 200 + self.y * 200
         self.seconds = 0
+        self.walk = False
+        self.tick = 0
+        self.n = 0
 
     def cut_sheet(self):
         result = [[], [], [], []]
+
         result[0].append(Enemy.img.subsurface(pygame.Rect(0, 400, 200, 200)))
         result[0].append(Enemy.img.subsurface(pygame.Rect(200, 400, 200, 200)))
         result[0].append(Enemy.img.subsurface(pygame.Rect(400, 400, 200, 200)))
@@ -161,17 +161,58 @@ class Enemy(pygame.sprite.Sprite):
         return result
 
     def update(self, *args, **kwargs):
+        global live
         seconds = int((elapsed_time % 60000) / 1000)
 
-        if seconds != self.seconds:
-            self.image = self.images[self.turn][self.cur_image]
-            if not (seconds & 1):
-                x, y = choice(self.find_way())
+        if self.walk:
+            self.n += 1
+            self.animation(self.n)
+            return
+        elif seconds != self.seconds:
+            if not seconds & 1:
+                a = self.find_way()
+                if len(a) > 1 and self.turn:
+                    a.remove(tuple(map(lambda x: -x, self.turn)))
+                x, y = choice(a)
+                self.walk = True
+                self.turn = x, y
+                self.tick = 0
+                if self.turn == (1, 0):
+                    self.image = self.images[1][0]
+                elif self.turn == (0, -1):
+                    self.image = self.images[0][0]
+                elif self.turn == (0, 1):
+                    self.image = self.images[2][0]
+                else:
+                    self.image = self.images[3][0]
                 self.x += x
                 self.y += y
-                self.rect.x += x * 200
-                self.rect.y += y * 200
+                self.rect.x += self.turn[0] * 10
+                self.rect.y += self.turn[1] * 10
+
+                if (hero.x, hero.y) == (self.x, self.y):
+                    # умер
+                    live = 2
+
             self.seconds = seconds
+
+    def animation(self, n):
+        if n < 20:
+            self.rect.x += self.turn[0] * 10
+            self.rect.y += self.turn[1] * 10
+            self.tick = (self.tick + 1) % 4
+            if self.turn == (1, 0):
+                self.image = self.images[1][self.tick]
+            elif self.turn == (0, -1):
+                self.image = self.images[0][self.tick]
+            elif self.turn == (0, 1):
+                self.image = self.images[2][self.tick]
+            else:
+                self.image = self.images[3][self.tick]
+        else:
+            self.n = 0
+            self.walk = False
+
 
     def find_way(self):
         res = []
@@ -195,9 +236,8 @@ class StartGame(pygame.sprite.Sprite):
 
 
 def new_game():
-    global board, enemy, real_m, step, turn, hero, live, time_running, elapsed_time
+    global board, real_m, step, turn, hero, live, time_running, elapsed_time
     board = Board()
-    enemy = Enemy()
     real_m = False
     step = 0
     turn = tuple()
@@ -243,25 +283,11 @@ class BackButton(pygame.sprite.Sprite):
             live = 0
 
 
-class DungeonButton(pygame.sprite.Sprite):
-    img = load_image('dungeon_button.png')
-
-    def __init__(self):
-        super().__init__(game_sprite)
-        self.image = DungeonButton.img
-        self.rect = self.image.get_rect()
-        self.rect.x = WIDTH / 2 - self.rect.w / 2
-        self.rect.y = HEIGHT - self.rect.h
-
-    def update(self, event):
-        global board
-        if self.rect.collidepoint(event.pos):
-            board = Board()
-
-
 class Board:
     def first_nears(self):
+        # первый шаг
         wal = set()
+
         for i in range(4, SIZE_BOARD[0] - 1):
             wal.add((i, 1))
         for i in range(4, SIZE_BOARD[1] - 1):
@@ -270,6 +296,7 @@ class Board:
             wal.add((SIZE_BOARD[0] - 1, i))
         for i in range(1, SIZE_BOARD[1] - 1):
             wal.add((SIZE_BOARD[1] - 1, i))
+        # берём все клетки по краям
         return wal
 
     @staticmethod
@@ -295,6 +322,7 @@ class Board:
 
     @staticmethod
     def find_clear_cells(array):
+        # ищет клетки, у которых нет соседей
         result = list()
         for i in range(1, SIZE_BOARD[0] - 1):
             for j in range(1, SIZE_BOARD[1] - 1):
@@ -305,16 +333,22 @@ class Board:
 
     @staticmethod
     def bfs(array):
+        global enemy
+        # алогиритм для поиска пути от игрока до выхода
         delta = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         d = [[1e9] * SIZE_BOARD[0] for _ in range(SIZE_BOARD[1])]
         d[1][1] = 0
         q = [(1, 1), ]
+        enemy_coor = None
         mmax = 0
         while q:
             x, y = q.pop()
             for dx, dy in delta:
                 nx, ny = dx + x, dy + y
                 if d[nx][ny] == 1e9 and array[nx][ny] != 1:
+                    if not enemy_coor and d[x][y] + 1 > SIZE_BOARD[0] << 1:
+                        enemy = Enemy(nx, ny)
+                        enemy_coor = True
                     d[nx][ny] = d[x][y] + 1
                     mmax = max(d[nx][ny], mmax)
                     q.insert(0, (nx, ny))
@@ -322,6 +356,7 @@ class Board:
 
     @staticmethod
     def bfs_yes_no(distant):
+        # принимает результат bfs, говорит, подходит ли карта для игры, или нет
         mmax = 0
         mmax_coord = (1, 1)
         for i in range(SIZE_BOARD[0]):
@@ -336,8 +371,9 @@ class Board:
             return False
 
     def create_board(self):
-        board = [[0] * SIZE_BOARD[0] for _ in range(SIZE_BOARD[1])]
-        board[1][1] = 2
+        # создаёт саму карту
+        board = [[0] * SIZE_BOARD[0] for _ in range(SIZE_BOARD[1])] # карта
+        board[1][1] = 2 # персонаж
         for i in range(SIZE_BOARD[0]):
             board[i][0] = 1
             board[i][-1] = 1
@@ -345,7 +381,7 @@ class Board:
             board[0][i] = 1
             board[-1][i] = 1
 
-        n_wals = randint(5, 7)
+        n_wals = randint(5, 7) # выбирает клетки по краям для того, чтобы сделать стены
         for i in range(n_wals):
             walls = set()
             b = self.first_nears()
@@ -379,7 +415,7 @@ class Board:
                     break
         a = self.bfs_yes_no(self.bfs(board))
         if a:
-            board[a[0]][a[1]] = 3
+            board[a[0]][a[1]] = 3 # выход
             return board
         else:
             return self.create_board()
@@ -389,6 +425,7 @@ class Board:
 
     def new_board(self):
         self.board = self.create_board()
+        enemy.board = self.board
         end_pos = (0, 0)
         for i in range(SIZE_BOARD[0]):
             for j in range(SIZE_BOARD[1]):
@@ -465,9 +502,9 @@ def move(turn, hero, board, real_m):
 
             write_result(time_text)
 
-        if (hero.x, hero.y) == (enemy.x, enemy.y):
-            # умер
-            live = 2
+    if (hero.x, hero.y) == (enemy.x, enemy.y):
+        # умер
+        live = 2
 
     return real_m
 
@@ -485,7 +522,7 @@ def real_move(turn_h):
     else:
         if board.board[hero.x + turn[0]][hero.y - turn[1]] == 3:
             live = 1
-        if board.board[hero.x + turn[0]][hero.y - turn[1]] == 4:
+        if (hero.x + turn[0], hero.y - turn[1]) == (enemy.x, enemy.y):
             live = 2
         hero.walk = False
         real_m = False
