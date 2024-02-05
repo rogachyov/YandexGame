@@ -7,6 +7,16 @@ import pygame
 
 SIZE_BOARD = 25, 25
 pygame.init()
+
+pygame.mixer.music.load('data/General Release.mp3')
+pygame.mixer.music.play(-1)
+
+player_steps_sound = pygame.mixer.Sound('data/monotonnyiy-shurshaschiy-zvuk-shaga.wav')
+enemy_near_sound = pygame.mixer.Sound('data/vozbujdennyiy-lay-sobaki.wav')
+game_win_sound = pygame.mixer.Sound('data/game-won.wav')
+game_fail_sound = pygame.mixer.Sound('data/spongebob-fail.wav')
+portal_near_sound = pygame.mixer.Sound('data/inecraft_portal.wav')
+
 SIZE = WIDTH, HEIGHT = 1920, 1080
 FPS = 60
 screen = pygame.display.set_mode(SIZE)
@@ -55,6 +65,9 @@ class MenuButtons(pygame.sprite.Sprite):
         global start, menu_active, running, info
         if args and args[0].type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(args[0].pos) and \
                 self.image == MenuButtons.img:
+            # pygame.mixer.music.stop()
+            pygame.mixer.music.load('data/Princess Quest.mp3')
+            pygame.mixer.music.play(-1)
             start = True
             menu_active = False
         elif args and args[0].type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(args[0].pos) and \
@@ -272,6 +285,8 @@ class BackButton(pygame.sprite.Sprite):
         global menu_active, running, info, start, board, enemy, real_m, step, turn, hero, game_sprite, board_sprites,\
             hero_sprite, live
         if args and args[0].type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(args[0].pos):
+            pygame.mixer.music.load('data/General Release.mp3')
+            pygame.mixer.music.play(-1)
             info = False
             start = False
             menu_active = True
@@ -482,19 +497,23 @@ def start_screen():
 
 
 def move(turn, hero, board, real_m):
-    global step, live
+    global step, live, player_steps_sound
     if board.board[hero.x + turn[0]][hero.y - turn[1]] != 1 and not real_m:
         real_m = True
         step = 20
         hero.walk = True
         real_move(turn)
         if turn == (0, 1):
+            player_steps_sound.play(1)
             hero.turn = 0
         elif turn == (0, -1):
+            player_steps_sound.play(1)
             hero.turn = 2
         elif turn == (1, 0):
+            player_steps_sound.play(1)
             hero.turn = 1
         elif turn == (-1, 0):
+            player_steps_sound.play(1)
             hero.turn = 3
         if board.board[hero.x][hero.y] == 3:
             # выиграл
@@ -541,6 +560,7 @@ class EndScreen(pygame.sprite.Sprite):
 
     def win(self):
         self.image = EndScreen.win_img
+
 
         if self.rect.y > 0:
             self.rect.y -= 50
@@ -692,6 +712,7 @@ while running:
     elif start: # началась игра
         menu_active = False
         game_sprite.draw(screen)
+
         if board: # созданно поле
             hero_sprite.update()
             board_sprites.draw(screen)
@@ -715,6 +736,7 @@ while running:
         menu_active = False
         info_sprite.draw(screen)
     if live == 1: # победа
+        game_win_sound.play(1)
 
         # Продолжаем отрисовывать время даже после окончания игры
         minutes = int(elapsed_time / 60000)
@@ -734,6 +756,7 @@ while running:
             time_running = False
 
     elif live == 2: # проигрыш
+        game_fail_sound.play(1)
         end_screen.lose()
         end_sprite.draw(screen)
 
@@ -749,6 +772,7 @@ while running:
         screen.blit(text, (WIDTH - 350, 0))
 
     if not menu_active: # отрисовка кнопки "back" всегда, если меню не активно
+
         back_to_menu.draw(screen)
 
     pygame.display.flip()
