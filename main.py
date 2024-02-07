@@ -11,8 +11,9 @@ pygame.init()
 pygame.mixer.music.load('data/General Release.mp3')
 pygame.mixer.music.play(-1)
 
-player_steps_sound = pygame.mixer.Sound('data/monotonnyiy-shurshaschiy-zvuk-shaga.wav')
-enemy_near_sound = pygame.mixer.Sound('data/vozbujdennyiy-lay-sobaki.wav')
+player_steps_sound = pygame.mixer.Sound('data/untitled.wav')
+enemy_near_sound1 = pygame.mixer.Sound('data/vozbujdennyiy-lay-sobaki.wav')
+enemy_near_sound2 = pygame.mixer.Sound('data/vozbujdennyiy-lay-sobaki.wav')
 game_win_sound = pygame.mixer.Sound('data/game-won.wav')
 game_fail_sound = pygame.mixer.Sound('data/spongebob-fail.wav')
 portal_near_sound = pygame.mixer.Sound('data/inecraft_portal.wav')
@@ -67,7 +68,7 @@ class MenuButtons(pygame.sprite.Sprite):
                 self.image == MenuButtons.img:
             # pygame.mixer.music.stop()
             pygame.mixer.music.load('data/Princess Quest.mp3')
-            pygame.mixer.music.play(-1)
+            pygame.mixer.music.play(-1, 2.0)
             start = True
             menu_active = False
         elif args and args[0].type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(args[0].pos) and \
@@ -96,6 +97,7 @@ class Hero(pygame.sprite.Sprite):
         self.rect.y = 400
         self.turn = 1
         self.tick = 1
+        self.enemy_is_near = False
 
     def cut_sheet(self):
         result = [[[], [], [], []], [[], [], [], []]]
@@ -174,7 +176,7 @@ class Enemy(pygame.sprite.Sprite):
         return result
 
     def update(self, *args, **kwargs):
-        global live
+        global live, enemy_near_sound
         seconds = int((elapsed_time % 60000) / 1000)
 
         if self.walk:
@@ -206,6 +208,12 @@ class Enemy(pygame.sprite.Sprite):
                 if (hero.x, hero.y) == (self.x, self.y):
                     # умер
                     live = 2
+
+                distance = ((hero.x - self.x) ** 2 + (hero.y - self.y) ** 2) ** 0.5
+                if distance <= 14:  # Условие для приближения к врагу на расстояние 50 пикселей
+                    enemy_near_sound2.play(0)
+                if distance <= 7:  # Условие для приближения к врагу на расстояние 50 пикселей
+                    enemy_near_sound1.play(0)
 
             self.seconds = seconds
 
@@ -449,6 +457,7 @@ class Board:
                 elif self.board[i][j] == 3:
                     end_pos = (i, j)
                 Cells((i, j), self.board[i][j])
+
         return end_pos
 
 
@@ -456,7 +465,7 @@ class Cells(pygame.sprite.Sprite):
     img = pygame.transform.scale(load_image('cat.png'), (800, 800))
     img_unde = pygame.transform.scale(load_image('ground.jpg'), (200, 200))
     img_wall = pygame.transform.scale(load_image('wall.png'), (200, 200))
-    img_port = pygame.transform.scale(load_image('portal.jpg'), (200, 200))
+    img_port = pygame.transform.scale(load_image('portal.png'), (200, 200))
 
     def __init__(self, pos, type):
         super().__init__(board_sprites)
@@ -504,16 +513,16 @@ def move(turn, hero, board, real_m):
         hero.walk = True
         real_move(turn)
         if turn == (0, 1):
-            player_steps_sound.play(1)
+            player_steps_sound.play(0)
             hero.turn = 0
         elif turn == (0, -1):
-            player_steps_sound.play(1)
+            player_steps_sound.play(0)
             hero.turn = 2
         elif turn == (1, 0):
-            player_steps_sound.play(1)
+            player_steps_sound.play(0)
             hero.turn = 1
         elif turn == (-1, 0):
-            player_steps_sound.play(1)
+            player_steps_sound.play(0)
             hero.turn = 3
         if board.board[hero.x][hero.y] == 3:
             # выиграл
@@ -736,7 +745,6 @@ while running:
         menu_active = False
         info_sprite.draw(screen)
     if live == 1: # победа
-        game_win_sound.play(1)
 
         # Продолжаем отрисовывать время даже после окончания игры
         minutes = int(elapsed_time / 60000)
@@ -754,11 +762,14 @@ while running:
         if time_running:
             write_result(time_text)
             time_running = False
+            game_win_sound.play(0)
 
     elif live == 2: # проигрыш
-        game_fail_sound.play(1)
         end_screen.lose()
         end_sprite.draw(screen)
+
+        if time_running:
+            game_fail_sound.play(0)
 
         # Продолжаем отрисовывать время даже после окончания игры
         time_running = False
@@ -770,6 +781,8 @@ while running:
         time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
         text = font.render(time_text, True, 'white')
         screen.blit(text, (WIDTH - 350, 0))
+
+
 
     if not menu_active: # отрисовка кнопки "back" всегда, если меню не активно
 
