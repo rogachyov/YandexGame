@@ -209,7 +209,7 @@ class Enemy(pygame.sprite.Sprite):
                     # умер
                     live = 2
 
-                distance = ((hero.x - self.x) ** 2 + (hero.y - self.y) ** 2) ** 0.5
+                distance = abs(self.x - hero.x) + abs(self.y - hero.y)
                 if distance <= 14:  # Условие для приближения к врагу на расстояние 50 пикселей
                     enemy_near_sound2.play(0)
                 if distance <= 7:  # Условие для приближения к врагу на расстояние 50 пикселей
@@ -560,8 +560,8 @@ def real_move(turn_h):
 
 
 class EndScreen(pygame.sprite.Sprite):
-    win_img = pygame.transform.scale(load_image('win.png'), SIZE)
-    lose_img = pygame.transform.scale(load_image('lose.png'), SIZE)
+    win_img = pygame.transform.scale(load_image('win1.png'), SIZE)
+    lose_img = pygame.transform.scale(load_image('lose1.png'), SIZE)
 
     def __init__(self):
         super().__init__(end_sprite)
@@ -572,13 +572,13 @@ class EndScreen(pygame.sprite.Sprite):
 
 
         if self.rect.y > 0:
-            self.rect.y -= 50
+            self.rect.y -= 40
 
     def lose(self):
         self.image = EndScreen.lose_img
 
         if self.rect.y > 0:
-            self.rect.y -= 50
+            self.rect.y -= 40
 
     def clear_a(self):
         # убрать конечное изображение с экрана
