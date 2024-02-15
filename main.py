@@ -643,7 +643,7 @@ step = 0
 turn = tuple()
 
 hero = None
-live = 0
+live = 3
 
 # секундомер
 start_time = 0
@@ -696,7 +696,7 @@ while running:
             back_to_menu.update(event)
         if live: # если кот проиграл или выиграл, то нажатия кнопок игнорируются
             break
-        elif event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN and not info:
             # упривление
             if event.key == pygame.K_LEFT:
                 real_m = move((-1, 0), hero, board, real_m)
@@ -781,8 +781,6 @@ while running:
         time_text = "{:02d}:{:02d}.{:03d}".format(minutes, seconds, milliseconds)
         text = font.render(time_text, True, 'white')
         screen.blit(text, (WIDTH - 350, 0))
-
-
 
     if not menu_active: # отрисовка кнопки "back" всегда, если меню не активно
 
