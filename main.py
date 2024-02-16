@@ -277,7 +277,6 @@ class Info(pygame.sprite.Sprite):
         super().__init__(*args)
         self.image = Info.img
         self.rect = self.image.get_rect()
-        self.rect.y = 100
 
 
 class BackButton(pygame.sprite.Sprite):
